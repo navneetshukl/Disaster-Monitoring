@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disaster Response Platform - Backend Testing Interface</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <style>
+        .api-section {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .response-area {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-connected { background-color: #10b981; }
+        .status-disconnected { background-color: #ef4444; }
+        .status-pending { background-color: #f59e0b; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Disaster Response Platform</h1>
+            <p class="text-gray-600 mb-4">Backend Testing Interface</p>
+            
+            <!-- Connection Status -->
+            <div class="mb-6 p-4 bg-blue-50 rounded-lg">
+                <h3 class="text-lg font-semibold mb-2">Connection Status</h3>
+                <div class="flex items-center space-x-4">
+                    <div>
+                        <span class="status-indicator status-pending" id="api-status"></span>
+                        <span>API Server: <span id="api-status-text">Testing...</span></span>
+                    </div>
+                    <div>
+                        <span class="status-indicator status-pending" id="ws-status"></span>
+                        <span>WebSocket: <span id="ws-status-text">Connecting...</span></span>
+                    </div>
+                    <div>
+                        <button onclick="testAPIConnection()" class="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600">
+                            Test Connection
+                        </button>
+                    </div>
+                    <div>
+                        <button onclick="runAllTests()" class="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600">
+                            Test All APIs
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-2 text-sm text-gray-600">
+                    Server URL: <code>http://localhost:3002</code> | 
+                    Last Update: <span id="last-update">Never</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real-time Updates -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h2 class="text-2xl font-semibold mb-4">Real-time Updates</h2>
+            <div class="response-area p-4 h-48" id="realtime-updates">
+                <div class="text-gray-500">Waiting for real-time updates...</div>
+            </div>
+        </div>
+
+        <!-- API Testing Sections -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <!-- Disasters API -->
+            <div class="api-section bg-white rounded-lg shadow p-6">
+                <h3 class="text-xl font-semibold mb-4 text-blue-600">Disasters API</h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <button onclick="testDisastersAPI('GET', '/api/disasters')" 
+                                class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm">
+                            GET All Disasters
+                        </button>
+                    </div>
+                    
+                    <div>
+                        <input type="text" id="disaster-title" placeholder="Disaster Title" 
+                               class="border border-gray-300 rounded px-3 py-2 w-full mb-2">
+                        <textarea id="disaster-description" placeholder="Disaster Description" 
+                                  class="border border-gray-300 rounded px-3 py-2 w-full mb-2 h-20"></textarea>
+                        <input type="text" id="disaster-location" placeholder="Location (e.g., Manhattan, NYC)" 
+                               class="border border-gray-300 rounded px-3 py-2 w-full mb-2">
+                        <button onclick="createDisaster()" 
+                                class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm">
+                            Create Disaster
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <h4 class="font-semibold mb-2">Response:</h4>
+                    <div class="response-area p-3" id="disasters-response"></div>
+                </div>
+            </div>
+
+            <!-- Resources API -->
+            <div class="api-section bg-white rounded-lg shadow p-6">
+                <h3 class="text-xl font-semibold mb-4 text-green-600">Resources API</h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <button onclick="testResourcesAPI('GET', '/api/resources')" 
+                                class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm">
+                            GET All Resources
+                        </button>
+                    </div>
+                    
+                    <div>
+                        <input type="text" id="resource-name" placeholder="Resource Name" 
+                               class="border border-gray-300 rounded px-3 py-2 w-full mb-2">
+                        <select id="resource-type" class="border border-gray-300 rounded px-3 py-2 w-full mb-2">
+                            <option value="shelter">Shelter</option>
+                            <option value="medical">Medical</option>
+                            <option value="food">Food</option>
+                            <option value="transport">Transport</option>
+                            <option value="communication">Communication</option>
+                        </select>
+                        <input type="text" id="resource-location" placeholder="Resource Location" 
+                               class="border border-gray-300 rounded px-3 py-2 w-full mb-2">
+                        <button onclick="createResource()" 
+                                class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm">
+                            Create Resource
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <h4 class="font-semibold mb-2">Response:</h4>
+                    <div class="response-area p-3" id="resources-response"></div>
+                </div>
+            </div>
+
+            <!-- Reports API -->
+            <div class="api-section bg-white rounded-lg shadow p-6">
+                <h3 class="text-xl font-semibold mb-4 text-purple-600">Reports API</h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <button onclick="testReportsAPI('GET', '/api/reports')" 
+                                class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm">
+                            GET All Reports
+                        </button>
+                    </div>
+                    
+                    <div>
+                        <input type="text" id="report-disaster-id" placeholder="Disaster ID (optional)" 
+                               class="border border-gray-300 rounded px-3 py-2 w-full mb-2">
+                        <textarea id="report-content" placeholder="Report Content" 
+                                  class="border border-gray-300 rounded px-3 py-2 w-full mb-2 h-20"></textarea>
+                        <input type="url" id="report-image-url" placeholder="Image URL (optional)" 
+                               class="border border-gray-300 rounded px-3 py-2 w-full mb-2">
+                        <button onclick="createReport()" 
+                                class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded text-sm">
+                            Create Report
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <h4 class="font-semibold mb-2">Response:</h4>
+                    <div class="response-area p-3" id="reports-response"></div>
+                </div>
+            </div>
+
+            <!-- Social Media API -->
+            <div class="api-section bg-white rounded-lg shadow p-6">
+                <h3 class="text-xl font-semibold mb-4 text-indigo-600">Social Media API</h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <button onclick="testSocialMediaAPI('GET', '/api/social-media/mock')" 
+                                class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm">
+                            GET Mock Social Media
+                        </button>
+                    </div>
+                    
+                    <div>
+                        <input type="text" id="social-disaster-id" placeholder="Disaster ID" 
+                               class="border border-gray-300 rounded px-3 py-2 w-full mb-2">
+                        <button onclick="fetchSocialMedia()" 
+                                class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded text-sm">
+                            Fetch Social Media Reports
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <h4 class="font-semibold mb-2">Response:</h4>
+                    <div class="response-area p-3" id="social-response"></div>
+                </div>
+            </div>
+
+            <!-- Official Updates API -->
+            <div class="api-section bg-white rounded-lg shadow p-6">
+                <h3 class="text-xl font-semibold mb-4 text-red-600">Official Updates API</h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <button onclick="testOfficialUpdatesAPI('GET', '/api/official-updates/sources')" 
+                                class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm">
+                            GET Available Sources
+                        </button>
+                    </div>
+                    
+                    <div>
+                        <input type="text" id="updates-disaster-id" placeholder="Disaster ID" 
+                               class="border border-gray-300 rounded px-3 py-2 w-full mb-2">
+                        <button onclick="fetchOfficialUpdates()" 
+                                class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded text-sm">
+                            Fetch Official Updates
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <h4 class="font-semibold mb-2">Response:</h4>
+                    <div class="response-area p-3" id="updates-response"></div>
+                </div>
+            </div>
+
+            <!-- Geocoding API -->
+            <div class="api-section bg-white rounded-lg shadow p-6">
+                <h3 class="text-xl font-semibold mb-4 text-yellow-600">Geocoding API</h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <button onclick="testGeocodingAPI('GET', '/api/geocoding/providers')" 
+                                class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm">
+                            GET Providers
+                        </button>
+                    </div>
+                    
+                    <div>
+                        <input type="text" id="geocode-location" placeholder="Location to geocode" 
+                               class="border border-gray-300 rounded px-3 py-2 w-full mb-2">
+                        <button onclick="geocodeLocation()" 
+                                class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded text-sm">
+                            Geocode Location
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <h4 class="font-semibold mb-2">Response:</h4>
+                    <div class="response-area p-3" id="geocoding-response"></div>
+                </div>
+            </div>
+
+            <!-- Image Verification API -->
+            <div class="api-section bg-white rounded-lg shadow p-6">
+                <h3 class="text-xl font-semibold mb-4 text-pink-600">Image Verification API</h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <button onclick="testImageVerificationAPI('GET', '/api/image-verification/test')" 
+                                class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm">
+                            Run Test Verification
+                        </button>
+                    </div>
+                    
+                    <div>
+                        <input type="url" id="verify-image-url" placeholder="Image URL to verify" 
+                               class="border border-gray-300 rounded px-3 py-2 w-full mb-2">
+                        <textarea id="verify-description" placeholder="Image Description" 
+                                  class="border border-gray-300 rounded px-3 py-2 w-full mb-2 h-20"></textarea>
+                        <button onclick="verifyImage()" 
+                                class="bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded text-sm">
+                            Verify Image
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <h4 class="font-semibold mb-2">Response:</h4>
+                    <div class="response-area p-3" id="verification-response"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disaster Response - CRUD Operations</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto p-6">
+        <h1 class="text-3xl font-bold mb-8 text-center text-blue-600">
+            🚨 Disaster Response CRUD Operations
+        </h1>
+
+        <!-- CREATE DISASTER -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-bold mb-4 text-green-600">📝 Create New Disaster</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <input type="text" id="create-title" placeholder="Disaster Title" 
+                       class="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                <input type="text" id="create-location" placeholder="Location" 
+                       class="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
+            </div>
+            
+            <textarea id="create-description" placeholder="Disaster Description" 
+                      class="w-full p-3 border rounded-lg mb-4 focus:ring-2 focus:ring-blue-500" rows="3"></textarea>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <select id="create-severity" class="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="low">Low Severity</option>
+                    <option value="moderate" selected>Moderate Severity</option>
+                    <option value="high">High Severity</option>
+                    <option value="critical">Critical Severity</option>
+                </select>
+                <select id="create-status" class="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="active" selected>Active</option>
+                    <option value="monitoring">Monitoring</option>
+                    <option value="resolved">Resolved</option>
+                </select>
+            </div>
+            
+            <button onclick="createDisaster()" 
+                    class="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-bold">
+                ➕ Create Disaster
+            </button>
+            
+            <div id="create-result" class="mt-4"></div>
+        </div>
+
+        <!-- READ DISASTERS -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-bold mb-4 text-blue-600">📋 View All Disasters</h2>
+            
+            <button onclick="loadDisasters()" 
+                    class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-bold mb-4">
+                🔄 Refresh Disasters
+            </button>
+            
+            <div id="disasters-list" class="space-y-4"></div>
+        </div>
+
+        <!-- UPDATE DISASTER -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8" id="update-section" style="display: none;">
+            <h2 class="text-xl font-bold mb-4 text-yellow-600">✏️ Update Disaster</h2>
+            
+            <input type="hidden" id="update-id">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <input type="text" id="update-title" placeholder="Disaster Title" 
+                       class="p-3 border rounded-lg focus:ring-2 focus:ring-yellow-500">
+                <input type="text" id="update-location" placeholder="Location" 
+                       class="p-3 border rounded-lg focus:ring-2 focus:ring-yellow-500">
+            </div>
+            
+            <textarea id="update-description" placeholder="Disaster Description" 
+                      class="w-full p-3 border rounded-lg mb-4 focus:ring-2 focus:ring-yellow-500" rows="3"></textarea>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <select id="update-severity" class="p-3 border rounded-lg focus:ring-2 focus:ring-yellow-500">
+                    <option value="low">Low Severity</option>
+                    <option value="moderate">Moderate Severity</option>
+                    <option value="high">High Severity</option>
+                    <option value="critical">Critical Severity</option>
+                </select>
+                <select id="update-status" class="p-3 border rounded-lg focus:ring-2 focus:ring-yellow-500">
+                    <option value="active">Active</option>
+                    <option value="monitoring">Monitoring</option>
+                    <option value="resolved">Resolved</option>
+                </select>
+            </div>
+            
+            <div class="flex gap-4">
+                <button onclick="updateDisaster()" 
+                        class="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-lg font-bold">
+                    💾 Update Disaster
+                </button>
+                <button onclick="cancelUpdate()" 
+                        class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-bold">
+                    ❌ Cancel
+                </button>
+            </div>
+            
+            <div id="update-result" class="mt-4"></div>
+        </div>
+
+        <!-- REAL-TIME LOG -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-bold mb-4 text-purple-600">📡 Real-Time Activity Log</h2>
+            <div id="activity-log" class="bg-gray-50 p-4 rounded-lg h-48 overflow-y-auto">
+                <p class="text-gray-500">Activity will appear here...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3003';
+        let disasters = [];
+
+        // UTILITY FUNCTIONS
+        function showMessage(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const bgColor = type === 'success' ? 'bg-green-100 text-green-800' : 
+                           type === 'error' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800';
+            element.innerHTML = `<div class="p-3 rounded ${bgColor}">${message}</div>`;
+        }
+
+        function logActivity(message, type = 'info') {
+            const logDiv = document.getElementById('activity-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const emoji = type === 'success' ? '✅' : type === 'error' ? '❌' : '📝';
+            const color = type === 'success' ? 'text-green-600' : type === 'error' ? 'text-red-600' : 'text-blue-600';
+            
+            logDiv.innerHTML += `<div class="mb-2 ${color}"><span class="text-gray-500">[${timestamp}]</span> ${emoji} ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        // CREATE DISASTER
+        async function createDisaster() {
+            const title = document.getElementById('create-title').value;
+            const description = document.getElementById('create-description').value;
+            const location = document.getElementById('create-location').value;
+            const severity = document.getElementById('create-severity').value;
+            const status = document.getElementById('create-status').value;
+
+            if (!title || !description) {
+                showMessage('create-result', 'Title and description are required!', 'error');
+                return;
+            }
+
+            logActivity(`Creating disaster: ${title}`, 'info');
+
+            try {
+                const response = await fetch(`${API_BASE}/api/disasters`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title,
+                        description,
+                        location_name: location || 'Unknown Location',
+                        severity,
+                        status
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage('create-result', `✅ SUCCESS: Disaster "${title}" created with ID: ${result.disaster.id}`, 'success');
+                    logActivity(`Disaster created successfully: ${title}`, 'success');
+                    
+                    // Clear form
+                    document.getElementById('create-title').value = '';
+                    document.getElementById('create-description').value = '';
+                    document.getElementById('create-location').value = '';
+                    document.getElementById('create-severity').value = 'moderate';
+                    document.getElementById('create-status').value = 'active';
+                    
+                    // Refresh the disasters list
+                    loadDisasters();
+                } else {
+                    showMessage('create-result', `❌ FAILED: ${result.error || result.message}`, 'error');
+                    logActivity(`Failed to create disaster: ${result.error || result.message}`, 'error');
+                }
+            } catch (error) {
+                showMessage('create-result', `❌ Network Error: ${error.message}`, 'error');
+                logActivity(`Network error: ${error.message}`, 'error');
+            }
+        }
+
+        // READ DISASTERS
+        async function loadDisasters() {
+            logActivity('Loading disasters...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/disasters`);
+                const result = await response.json();
+
+                if (response.ok) {
+                    disasters = result.disasters || [];
+                    displayDisasters(disasters);
+                    logActivity(`Loaded ${disasters.length} disasters`, 'success');
+                } else {
+                    showMessage('disasters-list', `❌ Failed to load disasters: ${result.error}`, 'error');
+                    logActivity(`Failed to load disasters: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage('disasters-list', `❌ Network Error: ${error.message}`, 'error');
+                logActivity(`Network error: ${error.message}`, 'error');
+            }
+        }
+
+        function displayDisasters(disasterList) {
+            const listDiv = document.getElementById('disasters-list');
+            
+            if (disasterList.length === 0) {
+                listDiv.innerHTML = '<p class="text-gray-500 text-center">No disasters found</p>';
+                return;
+            }
+
+            listDiv.innerHTML = disasterList.map(disaster => `
+                <div class="border rounded-lg p-4 bg-gray-50">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="font-bold text-lg text-gray-800">${disaster.title}</h3>
+                        <div class="flex gap-2">
+                            <button onclick="editDisaster('${disaster.id}')" 
+                                    class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm">
+                                ✏️ Edit
+                            </button>
+                            <button onclick="deleteDisaster('${disaster.id}')" 
+                                    class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">
+                                🗑️ Delete
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 mb-2">${disaster.description}</p>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                        <span><strong>Location:</strong> ${disaster.location_name || 'Unknown'}</span>
+                        <span><strong>Severity:</strong> ${disaster.severity}</span>
+                        <span><strong>Status:</strong> ${disaster.status}</span>
+                        <span><strong>ID:</strong> ${disaster.id.substring(0, 8)}...</span>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-2">
+                        Created: ${new Date(disaster.created_at).toLocaleString()}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // UPDATE DISASTER
+        function editDisaster(id) {
+            const disaster = disasters.find(d => d.id === id);
+            if (!disaster) return;
+
+            document.getElementById('update-id').value = disaster.id;
+            document.getElementById('update-title').value = disaster.title;
+            document.getElementById('update-description').value = disaster.description;
+            document.getElementById('update-location').value = disaster.location_name || '';
+            document.getElementById('update-severity').value = disaster.severity;
+            document.getElementById('update-status').value = disaster.status;
+
+            document.getElementById('update-section').style.display = 'block';
+            document.getElementById('update-section').scrollIntoView();
+            
+            logActivity(`Editing disaster: ${disaster.title}`, 'info');
+        }
+
+        async function updateDisaster() {
+            const id = document.getElementById('update-id').value;
+            const title = document.getElementById('update-title').value;
+            const description = document.getElementById('update-description').value;
+            const location = document.getElementById('update-location').value;
+            const severity = document.getElementById('update-severity').value;
+            const status = document.getElementById('update-status').value;
+
+            if (!title || !description) {
+                showMessage('update-result', 'Title and description are required!', 'error');
+                return;
+            }
+
+            logActivity(`Updating disaster: ${title}`, 'info');
+
+            try {
+                const response = await fetch(`${API_BASE}/api/disasters/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title,
+                        description,
+                        location_name: location,
+                        severity,
+                        status
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage('update-result', `✅ SUCCESS: Disaster "${title}" updated!`, 'success');
+                    logActivity(`Disaster updated successfully: ${title}`, 'success');
+                    cancelUpdate();
+                    loadDisasters();
+                } else {
+                    showMessage('update-result', `❌ FAILED: ${result.error || result.message}`, 'error');
+                    logActivity(`Failed to update disaster: ${result.error || result.message}`, 'error');
+                }
+            } catch (error) {
+                showMessage('update-result', `❌ Network Error: ${error.message}`, 'error');
+                logActivity(`Network error: ${error.message}`, 'error');
+            }
+        }
+
+        function cancelUpdate() {
+            document.getElementById('update-section').style.display = 'none';
+        }
+
+        // DELETE DISASTER
+        async function deleteDisaster(id) {
+            const disaster = disasters.find(d => d.id === id);
+            if (!disaster) return;
+
+            if (!confirm(`Are you sure you want to delete "${disaster.title}"?`)) {
+                return;
+            }
+
+            logActivity(`Deleting disaster: ${disaster.title}`, 'info');
+
+            try {
+                const response = await fetch(`${API_BASE}/api/disasters/${id}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    logActivity(`Disaster deleted successfully: ${disaster.title}`, 'success');
+                    loadDisasters();
+                } else {
+                    logActivity(`Failed to delete disaster: ${result.error || result.message}`, 'error');
+                }
+            } catch (error) {
+                logActivity(`Network error: ${error.message}`, 'error');
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            logActivity('CRUD Interface loaded successfully', 'success');
+            loadDisasters();
+        });
+    </script>
+</body>
+</html>
